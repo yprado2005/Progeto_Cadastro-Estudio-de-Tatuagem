@@ -1,0 +1,199 @@
+#include <iostream>
+#include <cstdio>
+#include <cstring>
+#include <cctype>
+#include <locale.h>
+
+using namespace std;
+
+struct Cliente {
+    char nome[30];
+    char telefone[20];
+    char tipoTatuagem[50];
+    char artista[30];
+    char status; 
+};
+
+int tamanho(FILE *);
+void cadastrarCliente(FILE *);
+void consultarCliente(FILE *);
+void gerarRelatorio(FILE *);
+void excluirCliente(FILE *);
+
+int main() {
+    int op;
+    FILE *arquivo;
+
+    if ((arquivo = fopen("clientes_tatuagem.dat", "rb+")) == NULL) {
+        if ((arquivo = fopen("clientes_tatuagem.dat", "wb+")) == NULL) {
+            printf("Erro ao abrir ou criar o arquivo!\n");
+            system("pause");
+            return 1;
+        }
+    }
+
+    do {
+        system("CLS");
+        printf("\n========== ESTUDIO DE TATUAGEM ==========\n");
+        printf("1. Cadastrar Cliente\n");
+        printf("2. Consultar Cliente\n");
+        printf("3. Gerar Relatorio\n");
+        printf("4. Excluir Cliente\n");
+        printf("5. Sair\n");
+        printf("\n========== Clientes Registrados: %d ==========\n", tamanho(arquivo));
+        printf("Escolha uma opcao: ");
+        scanf("%d", &op);
+
+        switch (op) {
+            case 1:
+                cadastrarCliente(arquivo);
+                break;
+            case 2:
+                consultarCliente(arquivo);
+                break;
+            case 3:
+                gerarRelatorio(arquivo);
+                break;
+            case 4:
+                excluirCliente(arquivo);
+                break;
+            case 5:
+                fclose(arquivo);
+                break;
+            default:
+                printf("Opcao invalida! Tente novamente.\n");
+                system("pause");
+        }
+    } while (op != 5);
+
+    return 0;
+}
+
+void cadastrarCliente(FILE *arquivo) {
+    Cliente cliente;
+    char confirma;
+
+    cliente.status = ' ';
+    fflush(stdin);
+
+    printf("Cadastro de novo cliente:\n");
+    printf("Nome: ");
+    gets(cliente.nome);
+    printf("Telefone: ");
+    gets(cliente.telefone);
+    printf("Tipo de Tatuagem: ");
+    gets(cliente.tipoTatuagem);
+    printf("Artista Responsavel: ");
+    gets(cliente.artista);
+    printf("\nConfirmar cadastro? (s/n): ");
+    fflush(stdin);
+    scanf("%c", &confirma);
+
+    if (toupper(confirma) == 'S') {
+        printf("\nSalvando cadastro...\n");
+        fseek(arquivo, 0, SEEK_END);
+        fwrite(&cliente, sizeof(Cliente), 1, arquivo);
+    }
+
+    system("pause");
+}
+
+void consultarCliente(FILE *arquivo) {
+    Cliente cliente;
+    int codigo;
+
+    printf("\nConsulta de cliente pelo codigo:\n");
+    printf("Informe o codigo: ");
+    scanf("%d", &codigo);
+
+    if ((codigo <= tamanho(arquivo)) && (codigo > 0)) {
+        fseek(arquivo, (codigo - 1) * sizeof(Cliente), SEEK_SET);
+        fread(&cliente, sizeof(Cliente), 1, arquivo);
+
+        if (cliente.status == ' ') {
+            printf("\nNome: %s", cliente.nome);
+            printf("\nTelefone: %s", cliente.telefone);
+            printf("\nTipo de Tatuagem: %s", cliente.tipoTatuagem);
+            printf("\nArtista Responsavel: %s\n", cliente.artista);
+        } else {
+            printf("\nRegistro excluido.\n");
+        }
+    } else {
+        printf("\nCodigo invalido.\n");
+    }
+
+    system("pause");
+}
+
+void gerarRelatorio(FILE *arquivo) {
+    char nomeArquivo[30];
+    printf("Nome do arquivo para o relatorio: ");
+    scanf("%s", nomeArquivo);
+    strcat(nomeArquivo, ".txt");
+
+    FILE *arquivoTxt = fopen(nomeArquivo, "w");
+    if (!arquivoTxt) {
+        printf("Erro ao criar o arquivo de relatorio.\n");
+        system("pause");
+        return;
+    }
+
+    fprintf(arquivoTxt, "Nome                     Telefone          Tipo de Tatuagem        Artista          Status\n");
+    fprintf(arquivoTxt, "============================================================================================\n");
+
+    Cliente cliente;
+    for (int i = 0; i < tamanho(arquivo); i++) {
+        fseek(arquivo, i * sizeof(Cliente), SEEK_SET);
+        fread(&cliente, sizeof(Cliente), 1, arquivo);
+
+        fprintf(arquivoTxt, "%-25s %-15s %-25s %-15s %c\n",
+                cliente.nome, cliente.telefone, cliente.tipoTatuagem, cliente.artista, cliente.status);
+    }
+
+    fprintf(arquivoTxt, "============================================================================================\n");
+    fclose(arquivoTxt);
+    printf("Relatorio gerado com sucesso!\n");
+    system("pause");
+}
+
+void excluirCliente(FILE *arquivo) {
+    Cliente cliente;
+    char confirma;
+    int codigo;
+
+    printf("\nInforme o codigo do cliente para exclusao: ");
+    scanf("%d", &codigo);
+
+    if ((codigo <= tamanho(arquivo)) && (codigo > 0)) {
+        fseek(arquivo, (codigo - 1) * sizeof(Cliente), SEEK_SET);
+        fread(&cliente, sizeof(Cliente), 1, arquivo);
+
+        if (cliente.status == ' ') {
+            printf("\nNome: %s", cliente.nome);
+            printf("\nTelefone: %s", cliente.telefone);
+            printf("\nTipo de Tatuagem: %s", cliente.tipoTatuagem);
+            printf("\nArtista Responsavel: %s\n", cliente.artista);
+            printf("Confirmar exclusao? (s/n): ");
+            getchar();
+            scanf("%c", &confirma);
+
+            if (toupper(confirma) == 'S') {
+                printf("\nExcluindo cliente...\n");
+                fseek(arquivo, (codigo - 1) * sizeof(Cliente), SEEK_SET);
+                cliente.status = '*';
+                fwrite(&cliente, sizeof(Cliente), 1, arquivo);
+            }
+        } else {
+            printf("\nRegistro ja excluido.\n");
+        }
+    } else {
+        printf("\nCodigo invalido.\n");
+    }
+
+    system("pause");
+}
+
+int tamanho(FILE *arquivo) {
+    fseek(arquivo, 0, SEEK_END);
+    return ftell(arquivo) / sizeof(Cliente);
+}
